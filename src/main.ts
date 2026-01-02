@@ -6,8 +6,13 @@ import { InkRenderer } from "./ink-renderer";
   // Create a new application
   const app = new Application();
 
-  // Initialize the application
-  await app.init({ background: "#ffffff", resizeTo: window });
+  // Initialize the application with antialiasing enabled
+  await app.init({
+    background: "#ffffff",
+    resizeTo: window,
+    antialias: true, // Enable antialiasing to smooth edges
+    resolution: window.devicePixelRatio // Support high-DPI screens
+  });
 
   // Append the application canvas to the document body
   const container = document.getElementById("pixi-container");
@@ -124,4 +129,5 @@ function createUI(inkRenderer: InkRenderer): void {
     }
   });
 }
+
 

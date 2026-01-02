@@ -400,7 +400,9 @@ async function initApp(): Promise<void> {
     // 初始化应用
     await app.init({
       background: '#ffffff',
-      resizeTo: container
+      resizeTo: container,
+      antialias: true, // 启用抗锯齿
+      resolution: window.devicePixelRatio // 支持高DPI屏幕
     });
     
     if (app) {
