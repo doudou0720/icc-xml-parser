@@ -35,7 +35,7 @@
     "vue",
     "component"
   ],
-  "author": "ICC-CE Team",
-  "license": "MIT",
+  "author": "doudou0720",
+  "license": "AGPL-3.0",
   "description": "Vue component for ICC-CE XML parsing and rendering"
 }
