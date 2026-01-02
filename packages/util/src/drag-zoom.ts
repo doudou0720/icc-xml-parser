@@ -47,9 +47,8 @@ export function checkBounds(x: number, y: number, config: CheckBoundsConfig): Po
     elementHeight = renderer.height * scale;
   } else if (element instanceof HTMLElement) {
     // HTMLElement：使用DOM元素尺寸
-    const elementRect = element.getBoundingClientRect();
-    elementWidth = elementRect.width * scale;
-    elementHeight = elementRect.height * scale;
+    elementWidth = element.offsetWidth * scale;
+    elementHeight = element.offsetHeight * scale;
   } else {
     // 无法获取尺寸，返回原始位置
     return { x, y };

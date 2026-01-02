@@ -243,7 +243,7 @@ function initDragAndZoom(): void {
       // 双指缩放
       const currentDistance = getDistance(e.touches[0], e.touches[1]);
       const scaleChange = currentDistance / zoomState.initialDistance;
-      const newScale = handleZoom({
+      const newScale = calculateZoom({
         currentScale: zoomState.startScale,
         delta: scaleChange,
         minZoom: props.minZoom,
