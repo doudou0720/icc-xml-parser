@@ -9,7 +9,8 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "lint": "eslint . --workspaces",
-    "dev": "npm run dev --workspace=@icc-xml-parser/vue-component"
+    "dev": "npm run dev --workspace=@icc-xml-parser/html",
+    "preview": "npm run preview --workspace=@icc-xml-parser/html"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
