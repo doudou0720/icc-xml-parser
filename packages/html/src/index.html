@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICC-CE XML 墨迹查看器</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="icc-xml-viewer">
+    <div id="container" class="viewer-container"></div>
+    <div class="default-ui">
+      <h3>ICC-CE XML 墨迹查看器</h3>
+      <input
+        type="file"
+        id="fileInput"
+        accept=".xml"
+        class="file-input"
+      />
+      <button id="sampleBtn" class="sample-btn">加载示例数据</button>
+      <button id="clearBtn" class="clear-btn">清除</button>
+      <div id="status" class="status">就绪：请选择 XML 文件</div>
+    </div>
+    <div class="zoom-controls">
+      <button id="zoomOutBtn" class="zoom-btn">-</button>
+      <div id="zoomLevel" class="zoom-level">100%</div>
+      <button id="zoomInBtn" class="zoom-btn">+</button>
+      <button id="resetZoomBtn" class="zoom-btn">重置</button>
+    </div>
+  </div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

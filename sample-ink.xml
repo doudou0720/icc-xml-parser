@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<InkCanvasStrokes Version="1.0" StrokeCount="3" SaveTime="2023-05-20 14:30:45">
+  <Stroke DrawingAttributes="Color=#FFFF0000;Width=5;Height=5;FitToCurve=True;IsHighlighter=False;IgnorePressure=False;StylusTip=Ellipse;">
+    <StylusPoints>
+      <StylusPoint X="100" Y="100" PressureFactor="0.5" />
+      <StylusPoint X="150" Y="120" PressureFactor="0.6" />
+      <StylusPoint X="200" Y="100" PressureFactor="0.7" />
+      <StylusPoint X="250" Y="150" PressureFactor="0.8" />
+      <StylusPoint X="300" Y="120" PressureFactor="0.9" />
+    </StylusPoints>
+  </Stroke>
+  <Stroke DrawingAttributes="Color=#FF0000FF;Width=3;Height=3;FitToCurve=True;IsHighlighter=False;IgnorePressure=True;StylusTip=Circle;">
+    <StylusPoints>
+      <StylusPoint X="150" Y="200" PressureFactor="0.5" />
+      <StylusPoint X="180" Y="220" PressureFactor="0.5" />
+      <StylusPoint X="210" Y="200" PressureFactor="0.5" />
+      <StylusPoint X="240" Y="230" PressureFactor="0.5" />
+      <StylusPoint X="270" Y="210" PressureFactor="0.5" />
+      <StylusPoint X="300" Y="240" PressureFactor="0.5" />
+    </StylusPoints>
+  </Stroke>
+  <Stroke DrawingAttributes="Color=#FF00FF00;Width=8;Height=8;FitToCurve=False;IsHighlighter=True;IgnorePressure=False;StylusTip=Rectangle;">
+    <StylusPoints>
+      <StylusPoint X="200" Y="300" PressureFactor="0.6" />
+      <StylusPoint X="220" Y="330" PressureFactor="0.7" />
+      <StylusPoint X="250" Y="350" PressureFactor="0.8" />
+      <StylusPoint X="280" Y="320" PressureFactor="0.9" />
+      <StylusPoint X="300" Y="300" PressureFactor="1.0" />
+    </StylusPoints>
+  </Stroke>
+</InkCanvasStrokes>

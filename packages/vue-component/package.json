@@ -1,0 +1,41 @@
+{
+  "name": "@icc-xml-parser/vue-component",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && vite build",
+    "dev": "vite",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@icc-xml-parser/core": "workspace:*",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.0",
+    "vite": "npm:rolldown-vite@^6.2.0"
+  },
+  "keywords": [
+    "icc",
+    "xml",
+    "parser",
+    "ink",
+    "canvas",
+    "vue",
+    "component"
+  ],
+  "author": "ICC-CE Team",
+  "license": "MIT",
+  "description": "Vue component for ICC-CE XML parsing and rendering"
+}

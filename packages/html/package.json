@@ -1,0 +1,20 @@
+{
+  "name": "@icc-xml-parser/html",
+  "version": "1.0.0",
+  "description": "HTML demo for ICC-CE XML parser",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@icc-xml-parser/core": "workspace:*",
+    "pixi.js": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vite": "npm:rolldown-vite@^6.2.0"
+  }
+}

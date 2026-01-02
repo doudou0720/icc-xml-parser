@@ -1,0 +1,37 @@
+{
+  "name": "@icc-xml-parser/core",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && vite build",
+    "dev": "vite",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "pixi.js": "^8.8.1"
+  },
+  "devDependencies": {
+    "vite": "npm:rolldown-vite@^6.2.0"
+  },
+  "keywords": [
+    "icc",
+    "xml",
+    "parser",
+    "ink",
+    "canvas"
+  ],
+  "author": "ICC-CE Team",
+  "license": "MIT",
+  "description": "Core functionality for ICC-CE XML parsing and rendering"
+}
