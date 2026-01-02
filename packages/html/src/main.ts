@@ -1,5 +1,10 @@
 import { Application } from 'pixi.js';
 import { ICCXmlParser, InkRenderer, InkCanvasStrokes } from '@icc-xml-parser/core';
+import { 
+  DragState, ZoomState, 
+  getDistance, getTouchCenter, setTransform, checkBounds, handleZoom as calculateZoom, 
+  calculateDragDelta, initDragState, initZoomState
+} from '@icc-xml-parser/util';
 
 // DOM元素
 const container = document.getElementById('container');
@@ -11,45 +16,12 @@ const zoomLevel = document.getElementById('zoomLevel');
 const zoomInBtn = document.getElementById('zoomInBtn');
 const zoomOutBtn = document.getElementById('zoomOutBtn');
 const resetZoomBtn = document.getElementById('resetZoomBtn');
+const resetPositionBtn = document.getElementById('resetPositionBtn');
 
 // 应用状态
 let app: Application | null = null;
 let inkRenderer: InkRenderer | null = null;
-
-// 拖动和缩放状态
-interface DragState {
-  isDragging: boolean;
-  startX: number;
-  startY: number;
-  initialX: number;
-  initialY: number;
-}
-
-interface ZoomState {
-  scale: number;
-  minZoom: number;
-  maxZoom: number;
-  isZooming: boolean;
-  startScale: number;
-  initialDistance: number;
-}
-
-const dragState: DragState = {
-  isDragging: false,
-  startX: 0,
-  startY: 0,
-  initialX: 0,
-  initialY: 0
-};
-
-const zoomState: ZoomState = {
-  scale: 1,
-  minZoom: 0.1,
-  maxZoom: 5,
-  isZooming: false,
-  startScale: 1,
-  initialDistance: 0
-};
+let stage: any = null; // 保存stage引用
 
 // 更新状态显示
 function updateStatus(message: string): void {
@@ -65,64 +37,28 @@ function updateZoomLevelDisplay(): void {
   }
 }
 
-// 获取两点之间的距离
-function getDistance(touch1: Touch, touch2: Touch): number {
-  const dx = touch2.clientX - touch1.clientX;
-  const dy = touch2.clientY - touch1.clientY;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-// 获取触摸事件的中心点
-function getTouchCenter(touch1: Touch, touch2: Touch): { x: number; y: number } {
-  return {
-    x: (touch1.clientX + touch2.clientX) / 2,
-    y: (touch1.clientY + touch2.clientY) / 2
-  };
-}
-
-// 设置元素变换
-function setTransform(element: HTMLElement, x: number, y: number, scale: number): void {
-  element.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
-}
-
-// 处理边界检测
-function checkBounds(x: number, y: number, element: HTMLElement): { x: number; y: number } {
-  if (!container) return { x, y };
-  
-  const containerRect = container.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
-  
-  const elementWidth = elementRect.width * zoomState.scale;
-  const elementHeight = elementRect.height * zoomState.scale;
-  
-  // 计算边界限制
-  const minX = Math.min(0, containerRect.width - elementWidth);
-  const minY = Math.min(0, containerRect.height - elementHeight);
-  const maxX = Math.max(0, containerRect.width - elementWidth);
-  const maxY = Math.max(0, containerRect.height - elementHeight);
-  
-  // 确保元素不会超出容器
-  return {
-    x: Math.max(minX, Math.min(x, maxX)),
-    y: Math.max(minY, Math.min(y, maxY))
-  };
-}
+// 初始化拖动和缩放状态
+const dragState = initDragState();
+const zoomState = initZoomState(0.1, 5);
 
 // 处理缩放
 function handleZoom(delta: number, centerX: number, centerY: number): void {
-  if (!app || !container) return;
+  if (!app || !stage) return;
   
-  const newScale = Math.max(zoomState.minZoom, Math.min(zoomState.maxZoom, zoomState.scale * delta));
+  const newScale = calculateZoom({
+    currentScale: zoomState.scale,
+    delta,
+    minZoom: zoomState.minZoom!,
+    maxZoom: zoomState.maxZoom!
+  });
   
   if (newScale !== zoomState.scale) {
     zoomState.scale = newScale;
     updateZoomLevelDisplay();
     
-    // 以中心点进行缩放，需要调整位置
-    if (app.canvas) {
-      // 这里假设app.canvas是可拖动的元素
-      // 实际实现中可能需要调整InkRenderer的缩放逻辑
-    }
+    // 更新stage的scale
+    stage.scale.x = zoomState.scale;
+    stage.scale.y = zoomState.scale;
   }
 }
 
@@ -231,7 +167,7 @@ async function loadDataFromUrl(): Promise<void> {
 
 // 初始化拖动和缩放功能
 function initDragAndZoom(): void {
-  if (!container) return;
+  if (!container || !app || !stage) return;
   
   // 鼠标拖动事件
   container.addEventListener('mousedown', (e) => {
@@ -242,11 +178,9 @@ function initDragAndZoom(): void {
     dragState.startX = e.clientX;
     dragState.startY = e.clientY;
     
-    // 获取当前元素的transform值
-    const transform = window.getComputedStyle(container).transform;
-    const matrix = new DOMMatrix(transform);
-    dragState.initialX = matrix.m41;
-    dragState.initialY = matrix.m42;
+    // 获取当前stage的position值
+    dragState.initialX = stage.position.x;
+    dragState.initialY = stage.position.y;
     
     container.classList.add('dragging');
     e.preventDefault();
@@ -255,19 +189,12 @@ function initDragAndZoom(): void {
   window.addEventListener('mousemove', (e) => {
     if (!dragState.isDragging) return;
     
-    const deltaX = e.clientX - dragState.startX;
-    const deltaY = e.clientY - dragState.startY;
+    // 计算拖动位移
+    const delta = calculateDragDelta(dragState, e.clientX, e.clientY);
     
-    let newX = dragState.initialX + deltaX;
-    let newY = dragState.initialY + deltaY;
-    
-    // 应用边界检测
-    const bounded = checkBounds(newX, newY, container);
-    newX = bounded.x;
-    newY = bounded.y;
-    
-    // 应用变换
-    container.style.transform = `translate(${newX}px, ${newY}px) scale(${zoomState.scale})`;
+    // 直接应用变换到stage，取消边界限制
+    stage.position.x = delta.x;
+    stage.position.y = delta.y;
     e.preventDefault();
   });
   
@@ -286,10 +213,9 @@ function initDragAndZoom(): void {
       dragState.startX = e.touches[0].clientX;
       dragState.startY = e.touches[0].clientY;
       
-      const transform = window.getComputedStyle(container).transform;
-      const matrix = new DOMMatrix(transform);
-      dragState.initialX = matrix.m41;
-      dragState.initialY = matrix.m42;
+      // 获取当前stage的position值
+      dragState.initialX = stage.position.x;
+      dragState.initialY = stage.position.y;
       
       container.classList.add('dragging');
     } else if (e.touches.length === 2) {
@@ -305,31 +231,29 @@ function initDragAndZoom(): void {
   container.addEventListener('touchmove', (e) => {
     if (e.touches.length === 1 && dragState.isDragging) {
       // 单指拖动
-      const deltaX = e.touches[0].clientX - dragState.startX;
-      const deltaY = e.touches[0].clientY - dragState.startY;
+      const delta = calculateDragDelta(dragState, e.touches[0].clientX, e.touches[0].clientY);
       
-      let newX = dragState.initialX + deltaX;
-      let newY = dragState.initialY + deltaY;
-      
-      const bounded = checkBounds(newX, newY, container);
-      newX = bounded.x;
-      newY = bounded.y;
-      
-      container.style.transform = `translate(${newX}px, ${newY}px) scale(${zoomState.scale})`;
+      // 直接应用变换到stage，取消边界限制
+      stage.position.x = delta.x;
+      stage.position.y = delta.y;
     } else if (e.touches.length === 2 && zoomState.isZooming) {
       // 双指缩放
       const currentDistance = getDistance(e.touches[0], e.touches[1]);
       const scaleChange = currentDistance / zoomState.initialDistance;
-      const newScale = Math.max(zoomState.minZoom, Math.min(zoomState.maxZoom, zoomState.startScale * scaleChange));
+      const newScale = handleZoom({
+        currentScale: zoomState.startScale,
+        delta: scaleChange,
+        minZoom: zoomState.minZoom!,
+        maxZoom: zoomState.maxZoom!
+      });
       
       if (newScale !== zoomState.scale) {
         zoomState.scale = newScale;
         updateZoomLevelDisplay();
         
-        const center = getTouchCenter(e.touches[0], e.touches[1]);
-        // 这里可以添加缩放中心逻辑
-        
-        container.style.transform = `translate(${dragState.initialX}px, ${dragState.initialY}px) scale(${zoomState.scale})`;
+        // 更新stage的scale
+        stage.scale.x = zoomState.scale;
+        stage.scale.y = zoomState.scale;
       }
     }
     e.preventDefault();
@@ -354,34 +278,39 @@ function initDragAndZoom(): void {
     // 计算缩放方向和比例
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     handleZoom(delta, e.clientX, e.clientY);
-    
-    // 更新transform
-    container.style.transform = `translate(${dragState.initialX}px, ${dragState.initialY}px) scale(${zoomState.scale})`;
   });
   
   // 缩放控件事件
   if (zoomInBtn) {
     zoomInBtn.addEventListener('click', () => {
       handleZoom(1.1, 0, 0);
-      container.style.transform = `translate(${dragState.initialX}px, ${dragState.initialY}px) scale(${zoomState.scale})`;
     });
   }
   
   if (zoomOutBtn) {
     zoomOutBtn.addEventListener('click', () => {
       handleZoom(0.9, 0, 0);
-      container.style.transform = `translate(${dragState.initialX}px, ${dragState.initialY}px) scale(${zoomState.scale})`;
     });
   }
   
   if (resetZoomBtn) {
     resetZoomBtn.addEventListener('click', () => {
-      // 重置缩放和位置
+      // 重置缩放
       zoomState.scale = 1;
+      stage.scale.x = 1;
+      stage.scale.y = 1;
+      updateZoomLevelDisplay();
+    });
+  }
+  
+  if (resetPositionBtn) {
+    resetPositionBtn.addEventListener('click', () => {
+      // 重置位置
+      stage.position.x = 0;
+      stage.position.y = 0;
+      // 更新初始位置，确保下次拖动正确
       dragState.initialX = 0;
       dragState.initialY = 0;
-      updateZoomLevelDisplay();
-      container.style.transform = `translate(0, 0) scale(1)`;
     });
   }
 }
@@ -408,6 +337,9 @@ async function initApp(): Promise<void> {
     if (app) {
       container.appendChild(app.canvas);
       inkRenderer = new InkRenderer(app);
+      
+      // 保存stage引用
+      stage = app.stage;
       
       // 绑定事件监听器
       if (fileInput) {

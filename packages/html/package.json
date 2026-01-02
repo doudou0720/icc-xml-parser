@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@icc-xml-parser/core": "workspace:*",
+    "@icc-xml-parser/util": "workspace:*",
     "pixi.js": "^8.0.0"
   },
   "devDependencies": {

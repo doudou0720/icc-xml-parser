@@ -83,21 +83,21 @@ export class InkRenderer {
    * Renders strokes with curve fitting (simplified Bezier curve)
    */
   private renderCurve(points: Array<{ x: number; y: number }>): void {
-    // 绘制第一段到第二个点
-    if (points.length >= 2) {
-      this.graphics.lineTo(points[1].x, points[1].y);
-    }
-    
-    for (let i = 2; i < points.length; i++) {
-      const p0 = points[i - 2];
-      const p1 = points[i - 1];
-      const p2 = points[i];
+    // 平滑曲线算法：使用Catmull-Rom样条转换为贝塞尔曲线
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = i === 0 ? points[i] : points[i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = i === points.length - 2 ? points[i + 1] : points[i + 2];
 
-      // Calculate control points for smooth curve
-      const cp1x = p0.x + (p1.x - p0.x) * 0.5;
-      const cp1y = p0.y + (p1.y - p0.y) * 0.5;
-      const cp2x = p1.x - (p2.x - p0.x) / 6;
-      const cp2y = p1.y - (p2.y - p0.y) / 6;
+      // 计算贝塞尔曲线的控制点
+      const tension = 0.5; // 曲线张力，0.5为默认值
+      
+      // Catmull-Rom样条到贝塞尔曲线的转换公式
+      const cp1x = p1.x + (p2.x - p0.x) * tension * 0.5;
+      const cp1y = p1.y + (p2.y - p0.y) * tension * 0.5;
+      const cp2x = p2.x - (p3.x - p1.x) * tension * 0.5;
+      const cp2y = p2.y - (p3.y - p1.y) * tension * 0.5;
 
       this.graphics.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
     }

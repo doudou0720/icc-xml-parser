@@ -31,6 +31,11 @@
 import { ref, onMounted, watch, onBeforeUnmount, computed } from 'vue';
 import { Application } from 'pixi.js';
 import { ICCXmlParser, InkRenderer, InkCanvasStrokes } from '@icc-xml-parser/core';
+import { 
+  DragState, ZoomState, Position,
+  getDistance, getTouchCenter, checkBounds, handleZoom as calculateZoom,
+  calculateDragDelta, initDragState, initZoomState
+} from '@icc-xml-parser/util';
 
 // Props定义
 interface Props {
@@ -86,37 +91,10 @@ const app: ref<Application | null> = ref(null);
 const inkRenderer: ref<InkRenderer | null> = ref(null);
 const status = ref<string>('就绪：请选择 XML 文件');
 
-// 拖动和缩放状态
-interface DragState {
-  isDragging: boolean;
-  startX: number;
-  startY: number;
-  initialX: number;
-  initialY: number;
-}
-
-interface ZoomState {
-  scale: number;
-  isZooming: boolean;
-  startScale: number;
-  initialDistance: number;
-}
-
-const position = ref({ x: 0, y: 0 });
-const dragState: DragState = {
-  isDragging: false,
-  startX: 0,
-  startY: 0,
-  initialX: 0,
-  initialY: 0
-};
-
-const zoomState: ZoomState = {
-  scale: 1,
-  isZooming: false,
-  startScale: 1,
-  initialDistance: 0
-};
+// 当前应用的样式
+const position = ref<Position>({ x: 0, y: 0 });
+const dragState = initDragState();
+const zoomState = initZoomState(props.minZoom, props.maxZoom);
 
 // 当前应用的样式
 const containerStyle = computed(() => ({
@@ -143,50 +121,16 @@ const contentStyle = computed(() => ({
   left: 0
 }));
 
-// 获取两点之间的距离
-function getDistance(touch1: Touch, touch2: Touch): number {
-  const dx = touch2.clientX - touch1.clientX;
-  const dy = touch2.clientY - touch1.clientY;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-// 获取触摸事件的中心点
-function getTouchCenter(touch1: Touch, touch2: Touch): { x: number; y: number } {
-  return {
-    x: (touch1.clientX + touch2.clientX) / 2,
-    y: (touch1.clientY + touch2.clientY) / 2
-  };
-}
-
-// 处理边界检测
-function checkBounds(x: number, y: number): { x: number; y: number } {
-  if (!containerRef.value) return { x, y };
-  
-  const parentElement = containerRef.value.parentElement;
-  if (!parentElement) return { x, y };
-  
-  const containerRect = parentElement.getBoundingClientRect();
-  const elementWidth = containerRect.width * zoomState.scale;
-  const elementHeight = containerRect.height * zoomState.scale;
-  
-  // 计算边界限制
-  const minX = Math.min(0, containerRect.width - elementWidth);
-  const minY = Math.min(0, containerRect.height - elementHeight);
-  const maxX = Math.max(0, containerRect.width - elementWidth);
-  const maxY = Math.max(0, containerRect.height - elementHeight);
-  
-  // 确保元素不会超出容器
-  return {
-    x: Math.max(minX, Math.min(x, maxX)),
-    y: Math.max(minY, Math.min(y, maxY))
-  };
-}
-
 // 处理缩放
 function handleZoom(delta: number, centerX: number, centerY: number): void {
   if (!props.zoomable || !containerRef.value) return;
   
-  const newScale = Math.max(props.minZoom, Math.min(props.maxZoom, zoomState.scale * delta));
+  const newScale = calculateZoom({
+    currentScale: zoomState.scale,
+    delta,
+    minZoom: props.minZoom,
+    maxZoom: props.maxZoom
+  });
   
   if (newScale !== zoomState.scale) {
     zoomState.scale = newScale;
@@ -236,19 +180,18 @@ function initDragAndZoom(): void {
   window.addEventListener('mousemove', (e) => {
     if (!dragState.isDragging || !props.draggable) return;
     
-    const deltaX = e.clientX - dragState.startX;
-    const deltaY = e.clientY - dragState.startY;
-    
-    let newX = dragState.initialX + deltaX;
-    let newY = dragState.initialY + deltaY;
+    // 计算拖动位移
+    const delta = calculateDragDelta(dragState, e.clientX, e.clientY);
     
     // 应用边界检测
-    const bounded = checkBounds(newX, newY);
-    newX = bounded.x;
-    newY = bounded.y;
+    const bounded = checkBounds(delta.x, delta.y, {
+      container: parentContainer,
+      element: container,
+      scale: zoomState.scale
+    });
     
     // 更新位置
-    position.value = { x: newX, y: newY };
+    position.value = bounded;
     emit('drag-move', container, position.value, e);
     e.preventDefault();
   });
@@ -284,25 +227,28 @@ function initDragAndZoom(): void {
   parentContainer.addEventListener('touchmove', (e) => {
     if (e.touches.length === 1 && dragState.isDragging && props.draggable) {
       // 单指拖动
-      const deltaX = e.touches[0].clientX - dragState.startX;
-      const deltaY = e.touches[0].clientY - dragState.startY;
-      
-      let newX = dragState.initialX + deltaX;
-      let newY = dragState.initialY + deltaY;
+      const delta = calculateDragDelta(dragState, e.touches[0].clientX, e.touches[0].clientY);
       
       // 应用边界检测
-      const bounded = checkBounds(newX, newY);
-      newX = bounded.x;
-      newY = bounded.y;
+      const bounded = checkBounds(delta.x, delta.y, {
+        container: parentContainer,
+        element: container,
+        scale: zoomState.scale
+      });
       
       // 更新位置
-      position.value = { x: newX, y: newY };
+      position.value = bounded;
       emit('drag-move', container, position.value, e);
     } else if (e.touches.length === 2 && zoomState.isZooming && props.zoomable) {
       // 双指缩放
       const currentDistance = getDistance(e.touches[0], e.touches[1]);
       const scaleChange = currentDistance / zoomState.initialDistance;
-      const newScale = Math.max(props.minZoom, Math.min(props.maxZoom, zoomState.startScale * scaleChange));
+      const newScale = handleZoom({
+        currentScale: zoomState.startScale,
+        delta: scaleChange,
+        minZoom: props.minZoom,
+        maxZoom: props.maxZoom
+      });
       
       if (newScale !== zoomState.scale) {
         zoomState.scale = newScale;
