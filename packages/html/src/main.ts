@@ -39,7 +39,7 @@ function updateZoomLevelDisplay(): void {
 
 // 初始化拖动和缩放状态
 const dragState = initDragState();
-const zoomState = initZoomState(0.1, 5);
+const zoomState = initZoomState();
 
 // 处理缩放
 function handleZoom(delta: number, centerX: number, centerY: number): void {
@@ -59,9 +59,7 @@ function handleZoom(delta: number, centerX: number, centerY: number): void {
   // 计算新的缩放比例
   const newScale = calculateZoom({
     currentScale: zoomState.scale,
-    delta,
-    minZoom: zoomState.minZoom!,
-    maxZoom: zoomState.maxZoom!
+    delta
   });
   
   if (newScale !== zoomState.scale) {
@@ -357,6 +355,12 @@ async function initApp(): Promise<void> {
       
       // 保存stage引用
       stage = app.stage;
+      
+      // 输出当前使用的渲染器类型
+      if (app.renderer && typeof app.renderer === 'object') {
+        const rendererType = app.renderer.constructor.name;
+        console.log('当前渲染器类型：', rendererType === 'WebGPURenderer' ? 'WebGPU' : 'WebGL');
+      }
       
       // 绑定事件监听器
       if (fileInput) {

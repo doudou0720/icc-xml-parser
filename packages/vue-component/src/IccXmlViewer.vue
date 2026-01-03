@@ -162,9 +162,7 @@ function handleZoom(delta: number, centerX: number, centerY: number): void {
   // 计算新的缩放比例
   const newScale = calculateZoom({
     currentScale: zoomState.scale,
-    delta,
-    minZoom: props.minZoom,
-    maxZoom: props.maxZoom
+    delta
   });
   
   if (newScale !== zoomState.scale) {
@@ -364,6 +362,12 @@ onMounted(() => {
       containerRef.value.appendChild(app.value.canvas);
       inkRenderer.value = new InkRenderer(app.value);
       
+      // 输出当前使用的渲染器类型
+      if (app.value.renderer && typeof app.value.renderer === 'object') {
+        const rendererType = app.value.renderer.constructor.name;
+        console.log('当前渲染器类型：', rendererType === 'WebGPURenderer' ? 'WebGPU' : 'WebGL');
+      }
+      
       // 初始化拖动和缩放事件
       initDragAndZoom();
       
@@ -475,6 +479,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .icc-xml-viewer {
   font-family: Arial, sans-serif;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
 }
 
 .viewer-container {

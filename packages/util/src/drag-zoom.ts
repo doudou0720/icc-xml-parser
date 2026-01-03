@@ -69,8 +69,8 @@ export function checkBounds(x: number, y: number, config: CheckBoundsConfig): Po
 
 // 处理缩放
 export function handleZoom(config: ZoomConfig): number {
-  const { currentScale, delta, minZoom, maxZoom } = config;
-  return Math.max(minZoom, Math.min(maxZoom, currentScale * delta));
+  const { currentScale, delta } = config;
+  return currentScale * delta;
 }
 
 // 计算拖动位移

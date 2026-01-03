@@ -31,8 +31,6 @@ export interface CheckBoundsConfig {
 export interface ZoomConfig {
   currentScale: number;
   delta: number;
-  minZoom: number;
-  maxZoom: number;
 }
 
 // 位置接口
