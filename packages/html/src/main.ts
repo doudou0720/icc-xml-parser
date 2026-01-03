@@ -43,8 +43,20 @@ const zoomState = initZoomState(0.1, 5);
 
 // 处理缩放
 function handleZoom(delta: number, centerX: number, centerY: number): void {
-  if (!app || !stage) return;
+  if (!app || !stage || !container) return;
   
+  // 获取容器的位置信息
+  const containerRect = container.getBoundingClientRect();
+  
+  // 计算中心点在容器坐标系中的位置
+  const localCenterX = centerX - containerRect.left;
+  const localCenterY = centerY - containerRect.top;
+  
+  // 保存当前缩放中心点
+  zoomState.centerX = localCenterX;
+  zoomState.centerY = localCenterY;
+  
+  // 计算新的缩放比例
   const newScale = calculateZoom({
     currentScale: zoomState.scale,
     delta,
@@ -53,6 +65,16 @@ function handleZoom(delta: number, centerX: number, centerY: number): void {
   });
   
   if (newScale !== zoomState.scale) {
+    // 计算元素相对中心点的偏移
+    const offsetX = stage.position.x - localCenterX;
+    const offsetY = stage.position.y - localCenterY;
+    
+    // 应用缩放并调整位置，保持中心点不变
+    const scaleRatio = newScale / zoomState.scale;
+    stage.position.x = localCenterX + offsetX * scaleRatio;
+    stage.position.y = localCenterY + offsetY * scaleRatio;
+    
+    // 更新缩放比例
     zoomState.scale = newScale;
     updateZoomLevelDisplay();
     
@@ -238,23 +260,18 @@ function initDragAndZoom(): void {
       stage.position.y = delta.y;
     } else if (e.touches.length === 2 && zoomState.isZooming) {
       // 双指缩放
-      const currentDistance = getDistance(e.touches[0], e.touches[1]);
-      const scaleChange = currentDistance / zoomState.initialDistance;
-      const newScale = calculateZoom({
-        currentScale: zoomState.startScale,
-        delta: scaleChange,
-        minZoom: zoomState.minZoom!,
-        maxZoom: zoomState.maxZoom!
-      });
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
       
-      if (newScale !== zoomState.scale) {
-        zoomState.scale = newScale;
-        updateZoomLevelDisplay();
-        
-        // 更新stage的scale
-        stage.scale.x = zoomState.scale;
-        stage.scale.y = zoomState.scale;
-      }
+      // 计算当前触摸中心点
+      const center = getTouchCenter(touch1, touch2);
+      
+      // 计算缩放比例变化
+      const currentDistance = getDistance(touch1, touch2);
+      const scaleChange = currentDistance / zoomState.initialDistance;
+      
+      // 调用handleZoom函数，使用触摸中心点作为缩放中心
+      handleZoom(scaleChange, center.x, center.y);
     }
     e.preventDefault();
   });
