@@ -93,6 +93,7 @@ const app: ref<Application | null> = ref(null);
 const inkRenderer: ref<InkRenderer | null> = ref(null);
 const status = ref<string>('就绪：请选择 XML 文件');
 const showZoomIndicator = ref<boolean>(false);
+const hideIndicatorTimeout = ref<number | null>(null);
 
 // 当前应用的样式
 const position = ref<Position>({ x: 0, y: 0 });
@@ -334,10 +335,16 @@ function initDragAndZoom(): void {
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     handleZoom(delta, e.clientX, e.clientY);
     
+    // 清除之前的定时器
+    if (hideIndicatorTimeout.value !== null) {
+      clearTimeout(hideIndicatorTimeout.value);
+    }
+    
     // 300毫秒后隐藏指示器
-    setTimeout(() => {
+    hideIndicatorTimeout.value = setTimeout(() => {
       showZoomIndicator.value = false;
-    }, 300);
+      hideIndicatorTimeout.value = null;
+    }, 300) as unknown as number;
   });
 }
 
