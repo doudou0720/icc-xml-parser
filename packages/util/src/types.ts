@@ -15,6 +15,8 @@ export interface ZoomState {
   isZooming: boolean;
   startScale: number;
   initialDistance: number;
+  centerX: number;
+  centerY: number;
 }
 
 // 边界检测配置接口

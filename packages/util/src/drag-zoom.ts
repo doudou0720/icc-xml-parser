@@ -107,6 +107,8 @@ export function initZoomState(minZoom: number = 0.1, maxZoom: number = 5): ZoomS
     maxZoom,
     isZooming: false,
     startScale: 1,
-    initialDistance: 0
+    initialDistance: 0,
+    centerX: 0,
+    centerY: 0
   };
 }

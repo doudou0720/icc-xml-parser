@@ -2,6 +2,8 @@
   <div class="icc-xml-viewer" :style="containerStyle">
     <div ref="containerRef" class="viewer-container" :style="contentStyle">
       <!-- Pixi canvas will be appended here -->
+      <!-- 缩放中心点指示器 -->
+      <div class="zoom-center-indicator" :style="zoomCenterIndicatorStyle" v-if="zoomState.isZooming || showZoomIndicator"></div>
     </div>
     <slot v-if="!modelValue">
       <div class="default-ui">
@@ -90,11 +92,28 @@ const containerRef = ref<HTMLDivElement | null>(null);
 const app: ref<Application | null> = ref(null);
 const inkRenderer: ref<InkRenderer | null> = ref(null);
 const status = ref<string>('就绪：请选择 XML 文件');
+const showZoomIndicator = ref<boolean>(false);
 
 // 当前应用的样式
 const position = ref<Position>({ x: 0, y: 0 });
 const dragState = initDragState();
 const zoomState = initZoomState(props.minZoom, props.maxZoom);
+
+// 缩放中心点指示器样式
+const zoomCenterIndicatorStyle = computed(() => ({
+  position: 'absolute',
+  left: `${zoomState.centerX}px`,
+  top: `${zoomState.centerY}px`,
+  width: '12px',
+  height: '12px',
+  borderRadius: '50%',
+  backgroundColor: 'rgba(255, 0, 0, 0.8)',
+  border: '2px solid white',
+  transform: 'translate(-50%, -50%)',
+  pointerEvents: 'none',
+  zIndex: 1000,
+  boxShadow: '0 0 0 2px rgba(255, 0, 0, 0.3)'
+}));
 
 // 当前应用的样式
 const containerStyle = computed(() => ({
@@ -125,6 +144,21 @@ const contentStyle = computed(() => ({
 function handleZoom(delta: number, centerX: number, centerY: number): void {
   if (!props.zoomable || !containerRef.value) return;
   
+  const container = containerRef.value;
+  const parentContainer = container.parentElement!;
+  
+  // 获取容器的位置信息
+  const containerRect = parentContainer.getBoundingClientRect();
+  
+  // 计算中心点在容器坐标系中的位置
+  const localCenterX = centerX - containerRect.left;
+  const localCenterY = centerY - containerRect.top;
+  
+  // 保存当前缩放中心点
+  zoomState.centerX = localCenterX;
+  zoomState.centerY = localCenterY;
+  
+  // 计算新的缩放比例
   const newScale = calculateZoom({
     currentScale: zoomState.scale,
     delta,
@@ -133,8 +167,19 @@ function handleZoom(delta: number, centerX: number, centerY: number): void {
   });
   
   if (newScale !== zoomState.scale) {
+    // 计算元素相对中心点的偏移
+    const offsetX = position.value.x - localCenterX;
+    const offsetY = position.value.y - localCenterY;
+    
+    // 应用缩放并调整位置，保持中心点不变
+    const scaleRatio = newScale / zoomState.scale;
+    position.value.x = localCenterX + offsetX * scaleRatio;
+    position.value.y = localCenterY + offsetY * scaleRatio;
+    
+    // 更新缩放比例
     zoomState.scale = newScale;
-    emit('zoom-change', containerRef.value, zoomState.scale, position.value, event as any);
+    
+    emit('zoom-change', container, zoomState.scale, position.value, event as any);
   }
 }
 
@@ -219,6 +264,12 @@ function initDragAndZoom(): void {
       zoomState.isZooming = true;
       zoomState.startScale = zoomState.scale;
       zoomState.initialDistance = getDistance(e.touches[0], e.touches[1]);
+      
+      // 计算并保存初始触摸中心点
+      const center = getTouchCenter(e.touches[0], e.touches[1]);
+      zoomState.centerX = center.x - parentContainer.getBoundingClientRect().left;
+      zoomState.centerY = center.y - parentContainer.getBoundingClientRect().top;
+      
       emit('zoom-start', container, zoomState.scale, e);
     }
     e.preventDefault();
@@ -241,19 +292,18 @@ function initDragAndZoom(): void {
       emit('drag-move', container, position.value, e);
     } else if (e.touches.length === 2 && zoomState.isZooming && props.zoomable) {
       // 双指缩放
-      const currentDistance = getDistance(e.touches[0], e.touches[1]);
-      const scaleChange = currentDistance / zoomState.initialDistance;
-      const newScale = calculateZoom({
-        currentScale: zoomState.startScale,
-        delta: scaleChange,
-        minZoom: props.minZoom,
-        maxZoom: props.maxZoom
-      });
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
       
-      if (newScale !== zoomState.scale) {
-        zoomState.scale = newScale;
-        emit('zoom-change', container, zoomState.scale, position.value, e);
-      }
+      // 计算当前触摸中心点
+      const center = getTouchCenter(touch1, touch2);
+      
+      // 使用当前触摸中心点作为缩放中心
+      const currentDistance = getDistance(touch1, touch2);
+      const scaleChange = currentDistance / zoomState.initialDistance;
+      
+      // 调用handleZoom函数，使用触摸中心点作为缩放中心
+      handleZoom(scaleChange, center.x, center.y);
     }
     e.preventDefault();
   });
@@ -266,6 +316,7 @@ function initDragAndZoom(): void {
     
     if (zoomState.isZooming && props.zoomable) {
       zoomState.isZooming = false;
+      showZoomIndicator.value = false;
       emit('zoom-end', container, zoomState.scale, position.value, e);
     }
   });
@@ -276,9 +327,17 @@ function initDragAndZoom(): void {
     
     e.preventDefault();
     
+    // 显示缩放中心点指示器
+    showZoomIndicator.value = true;
+    
     // 计算缩放方向和比例
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     handleZoom(delta, e.clientX, e.clientY);
+    
+    // 300毫秒后隐藏指示器
+    setTimeout(() => {
+      showZoomIndicator.value = false;
+    }, 300);
   });
 }
 
